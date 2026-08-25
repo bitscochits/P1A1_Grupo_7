@@ -1,0 +1,170 @@
+P1 - Recursos técnicos y estrategia de trabajo con IA
+Recursos técnicos y estrategia de trabajo con IA
+1. Principio
+La IA puede escribir una gran parte del código, pero no puede reemplazar la verificación física.
+
+Cada tarea importante debe tener:
+
+objetivo;
+
+restricciones;
+
+criterio de aceptación;
+
+prueba;
+
+revisión.
+
+2. AGENTS.md
+El repositorio debe contener un AGENTS.md.
+
+Como mínimo:
+
+# Project
+Laboratorio estructural digital 3D de un edificio real.
+​
+# Units
+SI.
+​
+# Structural model
+- Global model: linear elastic 3D.
+- Slabs are not FE modeled.
+- Floor gravity load = slab self weight + uniform finishes.
+- Slab loads are transferred through tributary areas.
+- RC capacity analysis is separate from the global model.
+​
+# Architecture
+- OpenSees owns structural analysis.
+- Unity owns visualization/preprocessing/interaction.
+- JSON is the contract between both.
+- Mobile does not run OpenSees in the base project.
+​
+# Verification rules
+- Check equilibrium.
+- Check units.
+- Check local axes.
+- Check superposition.
+- Never modify reference benchmark results without justification.
+3. Flujo recomendado
+Plan
+Pedir al agente:
+
+Inspecciona el repositorio, identifica archivos afectados, riesgos y pruebas necesarias. No edites.
+
+Build
+Luego:
+
+Implementa solamente la tarea descrita. No modifiques el contrato JSON ni los resultados de referencia.
+
+Test
+Ejecutar:
+
+unit tests;
+
+benchmark estructural;
+
+invariantes físicos;
+
+comparación manual.
+
+Review
+Pedir:
+
+Revisa este cambio buscando errores de unidades, signos, ejes, IDs, supuestos físicos y tests faltantes. No edites.
+
+4. Agentes especializados sugeridos
+structural-reviewer
+Revisa:
+
+GDL;
+
+unidades;
+
+ejes;
+
+apoyos;
+
+equilibrio;
+
+cargas;
+
+superposición;
+
+diagramas;
+
+capacidad RC.
+
+unity-reviewer
+Revisa:
+
+correspondencia elementTag ↔ GameObject;
+
+transformaciones;
+
+escalas;
+
+lectura/escritura JSON;
+
+selección;
+
+modificación de datos.
+
+load-path-reviewer
+Revisa:
+
+áreas tributarias;
+
+conservación de cargas;
+
+asociación polígono-viga;
+
+cargas móviles/sidequest.
+
+ar-reviewer
+Revisa:
+
+image tracking;
+
+pose;
+
+anchor;
+
+escala;
+
+transformación OpenSees → Unity → AR.
+
+test-planner
+Propone tests antes de implementar.
+
+5. Invariantes útiles para los agentes
+Equilibrio global
+sum(F_aplicadas) + sum(R) ≈ 0
+
+Área tributaria
+sum(cargas transferidas) = q * A
+
+Superposición
+R(A+B) = R(A) + R(B)
+
+IDs
+Todo elementTag exportado debe existir exactamente una vez en el viewer.
+
+Unidades
+Cada campo del contrato de datos debe tener unidades explícitas o una convención global única.
+
+6. Qué NO delegar sin revisión
+elección de idealización estructural;
+
+significado de los ejes locales;
+
+distribución tributaria;
+
+definición de apoyos;
+
+criterio de capacidad;
+
+interpretación de P-M;
+
+regla de distribución del sidequest de carga móvil;
+
+alineamiento físico AR.

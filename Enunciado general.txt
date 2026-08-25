@@ -1,0 +1,316 @@
+Contexto
+Durante 7 semanas, cada grupo de 3 estudiantes desarrollará un laboratorio estructural digital del Edificio de Ingeniería.
+
+El proyecto combina:
+
+análisis estructural 3D con OpenSees/OpenSeesPy;
+
+idealización a partir de planos reales;
+
+cargas gravitacionales mediante áreas tributarias;
+
+carga viva;
+
+sismo pseudoestático idealizado;
+
+principio de superposición;
+
+análisis no lineal de secciones de hormigón armado;
+
+curvas de interacción P-M para columnas y muros;
+
+visualización y pre/postproceso 3D en Unity;
+
+modificación e inspección del modelo;
+
+una experiencia básica de realidad aumentada (AR) en el edificio real;
+
+uso intensivo, documentado y crítico de agentes de IA (OpenCode, probar via la terminal siguiendo estas instrucciones: https://opencode.ai/docs/windows-wslLinks to an external site..)
+
+El propósito no es construir un videojuego. El propósito es construir y verificar un modelo estructural y luego desarrollar una interfaz que permita interrogar, modificar y comprender ese modelo.
+
+Objetivos de aprendizaje
+Al finalizar el proyecto, cada estudiante deberá ser capaz de:
+
+interpretar un modelo estructural espacial con 6 GDL por nodo;
+
+distinguir ejes locales y globales;
+
+interpretar apoyos, restricciones y diafragmas rígidos;
+convertir cargas superficiales de losa en cargas de vigas mediante áreas tributarias;
+
+construir y verificar casos de carga lineales independientes;
+
+demostrar numéricamente el principio de superposición;
+
+interpretar deformadas, reacciones y diagramas de esfuerzos;
+
+construir una Fiber Section de hormigón armado;
+
+obtener y verificar una curva momento-curvatura;
+
+generar una curva de interacción P-M;
+
+distinguir demanda global de capacidad de sección;
+
+explicar qué calcula OpenSees y qué calcula/representa Unity;
+
+relacionar un objeto gráfico con un nodeTag o elementTag;
+
+explicar una transformación de coordenadas OpenSees → Unity → AR;
+
+verificar críticamente código generado por IA.
+
+Alcance estructural obligatorio
+Modelo global
+El edificio se modelará como un sistema lineal elástico 3D.
+
+Se usarán:
+
+nodos 3D con 6 GDL;
+
+elementos lineales de viga-columna para vigas y columnas;
+
+muros representados mediante elementos lineales equivalentes de acuerdo con la convención entregada en el curso;
+
+diafragmas rígidos;
+
+apoyos idealizados;
+
+cargas gravitacionales, vivas y sísmicas pseudoestáticas.
+
+No se modelarán losas con elementos finitos. (!)
+
+Carga gravitacional
+Para simplificar el alcance, la carga gravitacional distribuida proveniente de pisos se definirá como:
+
+peso propio de la losa;
+
+una carga superficial uniforme adicional que representa terminaciones.
+
+peso propio de los elementos estructurales
+Ambas se tratarán conjuntamente como una carga superficial q_G.
+
+La transferencia desde la losa a las vigas debe hacerse explícitamente mediante áreas tributarias.
+
+El peso propio de vigas, columnas y muros podrá incorporarse según la convención entregada por el profesor, pero el ejercicio obligatorio de transferencia de cargas de piso se concentra en la losa + terminaciones.
+
+Carga viva
+La carga viva q_Q utilizará la misma geometría tributaria definida para las cargas gravitacionales, pero con una intensidad diferente.
+
+Sismo pseudoestático
+Se utilizará un patrón lateral idealizado entregado o parametrizado por el profesor.
+
+No es objetivo del proyecto desarrollar un procedimiento normativo sísmico completo.
+
+Se espera trabajar, como mínimo, con casos base independientes:
+
+G: gravedad;
+
+Q: carga viva;
+
+EX: carga lateral en X;
+
+EY: carga lateral en Y.
+
+Capacidad no lineal
+En forma separada del modelo global lineal se construirán secciones de fibras de hormigón armado.
+
+El alcance obligatorio incluye:
+
+una curva M-phi para una sección representativa;
+
+una curva P-M para una columna;
+
+una curva P-M para un muro;
+
+al menos una comparación independiente con contenidos del curso de hormigón armado;
+
+superposición de la demanda del modelo global sobre la curva de capacidad.
+
+La Fiber Section representa principalmente comportamiento axial-flexural de sección.
+
+No se debe interpretar automáticamente como:
+
+capacidad de corte;
+
+capacidad de miembro incluyendo inestabilidad;
+
+respuesta no lineal completa del edificio;
+
+falla por adherencia, pandeo de barras u otros mecanismos no modelados.
+
+Unity como herramienta de ingeniería
+Unity entra desde la Semana 2.
+
+Al comienzo se utilizará principalmente para:
+
+visualizar geometría;
+
+detectar errores de conectividad;
+
+mostrar IDs;
+
+mostrar ejes;
+
+mostrar apoyos;
+
+visualizar diafragmas;
+
+visualizar cargas;
+
+definir o inspeccionar áreas tributarias.
+
+Posteriormente evolucionará hacia:
+
+postproceso;
+
+diagramas;
+
+deformada;
+
+combinación interactiva de cargas;
+
+demanda-capacidad (curvas de interacción);
+
+modificación de parámetros del modelo;
+
+navegación tipo videojuego;
+
+AR.
+
+Elementos mínimos que el viewer debe poder activar/desactivar
+nodos;
+
+vigas;
+
+columnas;
+
+muros;
+
+diafragmas;
+
+apoyos/restricciones;
+
+ejes locales;
+
+IDs;
+
+áreas tributarias;
+
+cargas aplicadas;
+
+deformada;
+
+diagramas de esfuerzos;
+
+indicadores demanda-capacidad.
+
+curvas de interacción
+Modificación del modelo
+El producto final debe permitir modificar al menos dos familias de parámetros del modelo desde una interfaz reproducible.
+
+Ejemplos:
+
+intensidad de cargas;
+
+condiciones de apoyo;
+
+sección de un elemento;
+
+propiedad de material;
+
+activación/desactivación de un elemento;
+
+geometría tributaria.
+
+El grupo debe distinguir:
+
+Cambios que NO requieren reanálisis OpenSees
+Cambios de factores de combinación de casos lineales ya calculados:
+
+R = sum(lambda_i * R_i)
+
+Cambios que SÍ requieren reanálisis
+Por ejemplo:
+
+apoyo;
+
+sección;
+
+E;
+
+conectividad;
+
+remoción de elemento;
+
+geometría de carga que cambia los casos base.
+
+Para el proyecto base, el reanálisis puede ejecutarse manualmente en el computador y luego recargarse en Unity.
+
+El reanálisis automático cliente-servidor queda en Honors.
+
+Sidequests
+Los sidequests son funcionalidades acotadas que ayudan a construir el producto y pueden integrarse en la aplicación final.
+
+SQ1 — Tributary Area Inspector
+Herramienta para:
+
+seleccionar una planta;
+
+seleccionar una viga;
+
+definir/editar un polígono tributario;
+
+calcular su área;
+
+asociarlo a un elementTag;
+
+calcular carga total q*A;
+
+convertirla a una distribución sobre la viga;
+
+visualizar el polígono y la carga.
+
+Debe existir conservación de carga:
+
+carga transferida = q * A_tributaria.
+
+SQ2 — Load Combination Explorer
+Permite modificar lambda_G, lambda_Q, lambda_EX, lambda_EY y observar respuestas combinadas.
+
+Debe verificarse contra una corrida OpenSees explícita.
+
+SQ3 — Section Capacity Explorer
+Permite seleccionar una sección y mostrar:
+
+M-phi;
+
+P-M;
+
+demanda actual;
+
+cambio del punto de demanda al variar combinaciones.
+
+SQ4 — “¿Qué carga genero donde estoy?”
+Extensión interactiva vinculada a la posición del usuario.
+
+La aplicación asume una carga viva localizada idealizada P_user asociada a la posición (x,y) del usuario sobre un piso.
+
+El grupo debe definir y documentar una regla simple y físicamente interpretable para transferir esa carga a las vigas cercanas, por ejemplo:
+
+asignación a la celda/panel que contiene al usuario;
+
+distribución a vigas de borde mediante una regla geométrica explícita.
+
+Al desplazarse el usuario:
+
+cambia el panel activo;
+
+cambian las vigas receptoras;
+
+se actualizan visualmente las cargas;
+
+puede mostrarse el cambio correspondiente en fuerzas internas.
+
+No se exige modelar la losa como placa ni pretender que esta regla reproduce exactamente su comportamiento bidireccional. El valor está en visualizar el camino de carga idealizado.
