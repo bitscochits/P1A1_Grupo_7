@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
-LAB Benchmark 3D - Marco estructural simple
-============================================
-4 columnas, 4 vigas (2 por direccion), losa con descarga tributaria.
+LAB Benchmark 3D - Marco estructural con columnas tipo L
+========================================================
+4 columnas L, 4 vigas (2 por direccion), losa con descarga
+tributaria por areas triangulares y trapeciales.
 
 Geometria:
   Planta: 4.0 m x 4.0 m
   Altura: 3.0 m (1 piso)
 
 Secciones:
-  Columnas: 30 x 30 cm
+  Columnas: tipo L 30x30 cm (espesor 15 cm)
   Vigas:    25 x 50 cm
   Losa:     15 cm
 
@@ -43,47 +44,59 @@ Ec  = 4700.0 * math.sqrt(fpc) * 1000   # MPa -> kPa
 Gc  = Ec / (2.0 * (1.0 + 0.2))         # kPa
 gamma = 25.0                            # kN/m3
 
-# Columnas 30x30 cm
-col_b, col_h = 0.30, 0.30
-A_col  = col_b * col_h
-Iy_col = col_b * col_h**3 / 12.0
-Iz_col = col_h * col_b**3 / 12.0
-J_col  = min(Iy_col, Iz_col) * 0.3
+# --- Columna tipo L ---
+# L 30x30 cm, espesor 15 cm
+# Forma: cuadrado 30x30 con recorte 15x15 en una esquina
+#
+#   +--------+  30 cm
+#   |   15x15|
+#   |   +----+  15 cm
+#   |   |
+#   +---+  15 cm   15 cm
+#
+# Area = 30*30 - 15*15 = 675 cm2
+# Centroide: (12.5, 12.5) cm desde la esquina
+# Iy = Iz = 46375 cm4 (por simetria)
 
-# Vigas 25x50 cm
+col_leg = 0.30     # longitud exterior del brazo L
+col_t   = 0.15     # espesor del brazo L
+
+# Propiedades calculadas de la seccion L
+A_col  = col_leg**2 - (col_leg - col_t)**2  # 0.0675 m2
+Iy_col = 4.6375e-5   # m4
+Iz_col = 4.6375e-5   # m4 (simetrica)
+J_col  = 1.39125e-5  # m4 (aprox)
+
+# --- Vigas 25x50 cm ---
 v_b, v_h = 0.25, 0.50
 A_vig  = v_b * v_h
 Iy_vig = v_b * v_h**3 / 12.0
 Iz_vig = v_h * v_b**3 / 12.0
 J_vig  = min(Iy_vig, Iz_vig) * 0.3
 
-# Losa 15 cm
+# --- Losa 15 cm ---
 t_losa = 0.15
 
 # ============================================================
 # 3. CARGAS
 # ============================================================
-q_losa = gamma * t_losa + 1.5   # 5.25 kN/m2 (peso propio + acabados)
+q_losa = gamma * t_losa + 1.5   # 5.25 kN/m2
 q_viva = 2.0                    # kN/m2
 
 # ============================================================
 # 4. FUNCIONES
 # ============================================================
 def construir_modelo():
-    """Construye el modelo 3D completo. Retorna coords y tags de elementos."""
+    """Construye el modelo 3D completo."""
     ops.wipe()
     ops.model('basic', '-ndm', 3, '-ndf', 6)
 
-    # Material
     ops.uniaxialMaterial('Elastic', 1, Ec)
 
     # Transformaciones geometricas
-    # Columnas: eje local x vertical (+Z global), vecyz en +X
-    ops.geomTransf('Linear', 1, 1, 0, 0)
-    # Vigas X: eje local x en +X, vecyz en +Z
-    ops.geomTransf('Linear', 2, 0, 0, 1)
-    # Vigas Y: eje local x en +Y, vecyz en +Z
-    ops.geomTransf('Linear', 3, 0, 0, 1)
+    ops.geomTransf('Linear', 1, 1, 0, 0)  # Columnas: eje vertical, vecyz en +X
+    ops.geomTransf('Linear', 2, 0, 0, 1)  # Vigas X: eje +X, vecyz en +Z
+    ops.geomTransf('Linear', 3, 0, 0, 1)  # Vigas Y: eje +Y, vecyz en +Z
 
     # --- NODOS ---
     coords = {}
@@ -105,7 +118,7 @@ def construir_modelo():
     vigas_x  = []
     vigas_y  = []
 
-    # Columnas (nivel 0 -> nivel 1)
+    # Columnas
     for ix in range(nX):
         for iy in range(nY):
             n1 = 1 + ix * nY + iy
@@ -137,27 +150,63 @@ def construir_modelo():
 
 
 def aplicar_carga_gravedad(q, incluir_peso_vigas=False):
-    """Descarga losa sobre vigas por areas tributarias.
+    """
+    Descarga losa sobre vigas con areas tributarias triangulares/trapeciales.
+
+    Para una losa cuadrada Lx x Ly soportada por 4 vigas en el contorno:
     
-    La carga de losa se aplica UNA SOLA VEZ por nodo (via vigas X).
-    Cada nodo es compartido por 1 viga X y 1 viga Y, pero el area 
-    tributaria de la losa es la misma, no se duplica.
+    Vigas en X (paralelas, en Y=0 y Y=4):
+      Area tributaria = TRIANGULAR
+      Base del triangulo = Lx, altura = Ly/2
+      Cada viga recibe un triangulo con carga triangular:
+        - Nodo esquina: F = q * (Lx/2) * (Ly/2) / 2 = q * Lx * Ly / 8
+        - Nodo centro: F = q * Lx * Ly / 4 (doble por ser compartido)
     
-    Si incluir_peso_vigas=True, tambien agrega el peso propio de las vigas.
+    Vigas en Y (paralelas, en X=0 y X=4):
+      Area tributaria = TRAPEZOIDAL  
+      Base mayor = Ly, base menor = Ly/2 (en el centro), altura = Lx/2
+      Cada viga recibe un trapecio con carga distribuida:
+        - Nodo esquina: F = q * (Ly/2) * (Lx/2) / 2 = q * Lx * Ly / 8
+        - Nodo centro: F = q * Lx * Ly / 4
+
+    Para cuadrada (Lx = Ly = L), ambos tributarios son triangulos:
+      - Cada viga recibe un triangulo de base L y altura L/2
+      - Cada nodo esquina recibe: q * L^2 / 8
+      - Cada nodo centro recibe: q * L^2 / 4 (por 2 triangulos)
     """
     Lx = X[1] - X[0]
     Ly = Y[1] - Y[0]
+    Lmax = max(Lx, Ly)
+    Lmin = min(Lx, Ly)
 
-    # --- Carga de losa sobre vigas X (tributario: Ly/2) ---
+    # --- Vigas X (paralelas en Y=0 y Y=4): tributario TRIANGULAR ---
+    # Cada triangulo: base = Lx, altura = Ly/2
+    # Carga en esquinas (nodos extremos de la viga): q * Lx * Ly / 8
+    # Carga en centro de la viga: q * Lx * Ly / 4
+    F_tri_corner = q * Lx * Ly / 8.0  # por nodo esquina
+    F_tri_center = q * Lx * Ly / 4.0  # por nodo centro (compartido por 2 triangulos)
+
     for iy in range(nY):
-        trib_w = q * Ly / 2.0
-        F = trib_w * Lx / 2.0
-        n1 = 1 + nNodosPorPiso + 0 * nY + iy
-        n2 = 1 + nNodosPorPiso + 1 * nY + iy
-        ops.load(n1, 0.0, 0.0, -F, 0.0, 0.0, 0.0)
-        ops.load(n2, 0.0, 0.0, -F, 0.0, 0.0, 0.0)
+        n1 = 1 + nNodosPorPiso + 0 * nY + iy  # esquina X=0
+        n2 = 1 + nNodosPorPiso + 1 * nY + iy  # esquina X=4
+        # Cada nodo esquina recibe F_tri_corner
+        ops.load(n1, 0.0, 0.0, -F_tri_corner, 0.0, 0.0, 0.0)
+        ops.load(n2, 0.0, 0.0, -F_tri_corner, 0.0, 0.0, 0.0)
 
-    # --- Peso propio de solo si se solicita ---
+    # --- Vigas Y (paralelas en X=0 y X=4): tributario TRAPEZOIDAL ---
+    # Cada trapecio: bases Ly y Ly/2, altura Lx/2
+    # Carga en esquinas (nodos extremos de la viga): q * Lx * Ly / 8
+    # Carga en centro de la viga: q * Lx * Ly / 4
+    F_trap_corner = q * Lx * Ly / 8.0
+    F_trap_center = q * Lx * Ly / 4.0
+
+    for ix in range(nX):
+        n1 = 1 + nNodosPorPiso + ix * nY + 0  # esquina Y=0
+        n2 = 1 + nNodosPorPiso + ix * nY + 1  # esquina Y=4
+        ops.load(n1, 0.0, 0.0, -F_trap_corner, 0.0, 0.0, 0.0)
+        ops.load(n2, 0.0, 0.0, -F_trap_corner, 0.0, 0.0, 0.0)
+
+    # --- Peso propio de vigas ---
     if incluir_peso_vigas:
         w_viga = gamma * A_vig  # kN/m
 
@@ -190,7 +239,7 @@ def resolver():
 
 
 def extraer_resultados(coords):
-    """Extrae desplazamientos, reacciones y fuerzas de elementos."""
+    """Extrae desplazamientos y reacciones."""
     disp = {}
     for nid in coords:
         disp[nid] = [ops.nodeDisp(nid, i) for i in range(1, 7)]
@@ -206,7 +255,7 @@ def extraer_resultados(coords):
 # 5. EJECUCION
 # ============================================================
 print("=" * 60)
-print("  LAB BENCHMARK 3D - Marco simple 4x4 m, 1 piso")
+print("  LAB BENCHMARK 3D - Columnas L, tributarios tri/trapecio")
 print("=" * 60)
 
 # --- CASO G: Carga muerta ---
@@ -215,7 +264,7 @@ coords, cols, vx, vy = construir_modelo()
 nodos_piso1 = list(range(nNodosPorPiso + 1, 2 * nNodosPorPiso + 1))
 
 print(f"    Nodos:    {len(coords)}")
-print(f"    Columnas: {len(cols)}")
+print(f"    Columnas: {len(cols)} (tipo L)")
 print(f"    Vigas X:  {len(vx)}")
 print(f"    Vigas Y:  {len(vy)}")
 print(f"    Total:    {len(cols) + len(vx) + len(vy)} elementos")
@@ -246,7 +295,7 @@ print("\n[4] Aplicando carga lateral EX...")
 construir_modelo()
 ops.timeSeries('Linear', 1)
 ops.pattern('Plain', 1, 1)
-F_sismo = 50.0  # kN
+F_sismo = 50.0
 for nid in nodos_piso1:
     ops.load(nid, F_sismo, 0.0, 0.0, 0.0, 0.0, 0.0)
 ok_EX = resolver()
@@ -264,12 +313,14 @@ Lx = X[1] - X[0]
 Ly = Y[1] - Y[0]
 area_losa = Lx * Ly
 
+# Carga muerta
 peso_losa     = gamma * t_losa * area_losa
 peso_acabados = 1.5 * area_losa
 peso_vigas    = 4 * gamma * A_vig * Lx
 carga_G_total = peso_losa + peso_acabados + peso_vigas
 carga_Q_total = q_viva * area_losa
 
+# Reacciones
 sum_Rz_G = sum(reac_G[n][2] for n in reac_G)
 sum_Rz_Q = sum(reac_Q[n][2] for n in reac_Q)
 
@@ -277,16 +328,39 @@ print(f"\n  Carga muerta (G):")
 print(f"    Peso losa:        {peso_losa:>10.2f} kN")
 print(f"    Peso acabados:    {peso_acabados:>10.2f} kN")
 print(f"    Peso vigas:       {peso_vigas:>10.2f} kN")
-print(f"    TOTAL aplicado:   {carga_G_total:>10.2f} kN (hacia abajo)")
-print(f"    SUM reacciones:   {sum_Rz_G:>10.2f} kN (hacia arriba)")
-error_G = abs(carga_G_total - sum_Rz_G)
-print(f"    Error equilibrio: {error_G:>10.6f} kN")
+print(f"    TOTAL aplicado:   {carga_G_total:>10.2f} kN")
+print(f"    SUM reacciones:   {sum_Rz_G:>10.2f} kN")
+print(f"    Error equilibrio: {abs(carga_G_total - sum_Rz_G):>10.6f} kN")
 
 print(f"\n  Carga viva (Q):")
-print(f"    TOTAL aplicado:   {carga_Q_total:>10.2f} kN (hacia abajo)")
-print(f"    SUM reacciones:   {sum_Rz_Q:>10.2f} kN (hacia arriba)")
-error_Q = abs(carga_Q_total - sum_Rz_Q)
-print(f"    Error equilibrio: {error_Q:>10.6f} kN")
+print(f"    TOTAL aplicado:   {carga_Q_total:>10.2f} kN")
+print(f"    SUM reacciones:   {sum_Rz_Q:>10.2f} kN")
+print(f"    Error equilibrio: {abs(carga_Q_total - sum_Rz_Q):>10.6f} kN")
+
+# --- Areas tributarias ---
+print("\n" + "=" * 60)
+print("  AREAS TRIBUTARIAS")
+print("=" * 60)
+F_nodo = q_losa * Lx * Ly / 8.0  # carga por nodo esquina
+
+# Para losa cuadrada (Lx=Ly), ambas son triangulos de area Lx*Ly/4
+# Para losa rectangular (Lx != Ly): uno es triangulo, otro es trapecio
+if abs(Lx - Ly) < 1e-6:
+    area_tri = Lx * Ly / 4.0
+    area_trap = area_tri
+    tipo_trib = "Losa cuadrada: ambas direcciones son TRIANGULOS"
+else:
+    area_tri = 0.5 * Lx * (Ly / 2.0)    # triangulo: base Lx, altura Ly/2
+    area_trap = 0.5 * (Ly + Ly/2) * (Lx/2)  # trapecio: bases Ly y Ly/2, altura Lx/2
+    tipo_trib = "Losa rectangular: X=triangulo, Y=trapecio"
+
+print(f"\n  {tipo_trib}")
+print(f"\n  Vigas X (TRIANGULARES):")
+print(f"    Cada nodo esquina recibe: {F_nodo:.2f} kN")
+print(f"    Area por viga: {area_tri:.2f} m2")
+print(f"\n  Vigas Y (TRIANGULARES/TRAPEZOIDALES):")
+print(f"    Cada nodo esquina recibe: {F_nodo:.2f} kN")
+print(f"    Area por viga: {area_trap:.2f} m2")
 
 # --- Desplazamientos ---
 print("\n" + "=" * 60)
@@ -307,7 +381,7 @@ print("=" * 60)
 print(f"  {'Elem':<6} {'Tipo':<10} {'P_i(kN)':<12} {'V2_i(kN)':<12} {'V3_i(kN)':<12} {'M2_i':<12}")
 for etag in cols + vx + vy:
     f = fuerzas_G[etag]
-    tipo = "Col" if etag in cols else ("VigX" if etag in vx else "VigY")
+    tipo = "ColL" if etag in cols else ("VigX" if etag in vx else "VigY")
     print(f"  {etag:<6} {tipo:<10} {f[0]:<12.4f} {f[1]:<12.4f} {f[2]:<12.4f} {f[4]:<12.4f}")
 
 # ============================================================
@@ -317,7 +391,7 @@ os.makedirs('results', exist_ok=True)
 
 resultados = {
     'model_info': {
-        'description': 'Marco 3D simple: 4 columnas, 4 vigas, losa',
+        'description': 'Marco 3D: 4 columnas L, 4 vigas, losa tributaria tri/trapecio',
         'geometry': {
             'plan_x_m': Lx,
             'plan_y_m': Ly,
@@ -327,7 +401,10 @@ resultados = {
             'n_beams_y': len(vy),
         },
         'sections': {
-            'column': f'{col_b*100:.0f}x{col_h*100:.0f} cm',
+            'column': f'L {col_leg*100:.0f}x{col_leg*100:.0f} cm, espesor {col_t*100:.0f} cm',
+            'column_area_m2': round(A_col, 6),
+            'column_Iy_m4': Iy_col,
+            'column_Iz_m4': Iz_col,
             'beam': f'{v_b*100:.0f}x{v_h*100:.0f} cm',
             'slab': f'{t_losa*100:.0f} cm',
         },
@@ -339,6 +416,7 @@ resultados = {
         'loads': {
             'q_dead_kN_m2': q_losa,
             'q_live_kN_m2': q_viva,
+            'tributary_method': 'Triangular (vigas X) + Trapezoidal (vigas Y)',
         },
         'units': 'm, kN, kPa',
     },

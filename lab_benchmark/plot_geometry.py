@@ -1,180 +1,221 @@
 #!/usr/bin/env python3
 """
-VISUALIZACIÓN — Laboratorio Benchmark 3D
-==========================================
-Gráfica de geometría, ejes y cargas.
+VISUALIZACION - Benchmark 3D con columnas L
+=============================================
+Graficas de: planta, alzado, areas tributarias, columnas L, GDL.
 """
 
 import matplotlib
-matplotlib.use('Agg')  # Backend sin GUI
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from mpl_toolkits.mplot3d import Axes3D
-import json
+import numpy as np
 import os
 
-# ============================================================
-# 1. PLANTA — Geometría y ejes
-# ============================================================
-print("Generando gráficas...")
+os.makedirs('results', exist_ok=True)
 
+# ============================================================
+# 1. PLANTA - Estructura y areas tributarias
+# ============================================================
 fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 
-# --- Planta (vista superior) ---
+# --- Planta: areas tributarias ---
 ax1 = axes[0]
-ax1.set_title('PLANTA — Geometría y Ejes', fontsize=13, fontweight='bold')
+ax1.set_title('AREAS TRIBUTARIAS - Losa 4x4 m', fontsize=13, fontweight='bold')
 ax1.set_xlabel('X (m)')
 ax1.set_ylabel('Y (m)')
 
-# Columnas (puntos)
-col_x = [0, 4, 0, 4]
-col_y = [0, 0, 4, 4]
-ax1.scatter(col_x, col_y, s=200, c='black', zorder=5, label='Columnas')
-for i, (cx, cy) in enumerate(zip(col_x, col_y)):
-    ax1.annotate(f'C{i+1}\n(0,0)', (cx, cy), textcoords="offset points",
-                 xytext=(8, 8), fontsize=9)
+# Losa (fondo gris claro)
+ax1.fill([0, 4, 4, 0], [0, 0, 4, 4], alpha=0.15, color='gray', label='Losa')
 
-# Vigas X
-ax1.plot([0, 4], [0, 0], 'b-', linewidth=3, label='Viga X')
-ax1.plot([0, 4], [4, 4], 'b-', linewidth=3)
+# Triangulo viga Y=0 (abajo): vertices (0,0), (4,0), (2,2)
+tri1 = plt.Polygon([[0,0], [4,0], [2,2]], alpha=0.4, color='blue', label='Triangulo (viga X)')
+ax1.add_patch(tri1)
 
-# Vigas Y
-ax1.plot([0, 0], [0, 4], 'r-', linewidth=3, label='Viga Y')
-ax1.plot([4, 4], [0, 4], 'r-', linewidth=3)
+# Triangulo viga Y=4 (arriba): vertices (0,4), (4,4), (2,2)
+tri2 = plt.Polygon([[0,4], [4,4], [2,2]], alpha=0.4, color='blue')
+ax1.add_patch(tri2)
 
-# Ejes (líneas punteadas)
+# Triangulo viga X=0 (izq): vertices (0,0), (0,4), (2,2)
+tri3 = plt.Polygon([[0,0], [0,4], [2,2]], alpha=0.4, color='red', label='Triangulo (viga Y)')
+ax1.add_patch(tri3)
+
+# Triangulo viga X=4 (der): vertices (4,0), (4,4), (2,2)
+tri4 = plt.Polygon([[4,0], [4,4], [2,2]], alpha=0.4, color='red')
+ax1.add_patch(tri4)
+
+# Vigas
+ax1.plot([0, 4], [0, 0], 'b-', linewidth=3)  # viga X inferior
+ax1.plot([0, 4], [4, 4], 'b-', linewidth=3)  # viga X superior
+ax1.plot([0, 0], [0, 4], 'r-', linewidth=3)  # viga Y izquierda
+ax1.plot([4, 4], [0, 4], 'r-', linewidth=3)  # viga Y derecha
+
+# Columnas L (esquinas)
+for cx, cy in [(0,0), (4,0), (0,4), (4,4)]:
+    # Dibujar forma L simple
+    rect = patches.FancyBboxPatch((cx-0.15, cy-0.15), 0.30, 0.30,
+                                   boxstyle="round,pad=0.02",
+                                   facecolor='black', edgecolor='black')
+    ax1.add_patch(rect)
+
+# Etiquetas de carga por nodo
+F_nodo = 5.25 * 4 * 4 / 8  # 10.5 kN
+for cx, cy in [(0,0), (4,0), (0,4), (4,4)]:
+    ax1.text(cx, cy+0.3, f'{F_nodo:.1f} kN', ha='center', fontsize=9, color='darkgreen')
+
+# Punto centro (交点 de diagonales)
+ax1.plot(2, 2, 'kx', markersize=10, markeredgewidth=2)
+ax1.text(2, 2.3, 'Centro', ha='center', fontsize=9)
+
+# Diagonales punteadas
+ax1.plot([0, 4], [0, 4], 'k--', linewidth=0.8, alpha=0.5)
+ax1.plot([0, 4], [4, 0], 'k--', linewidth=0.8, alpha=0.5)
+
+# Ejes
 for x in [0, 4]:
-    ax1.axvline(x=x, color='gray', linestyle='--', linewidth=0.8, alpha=0.5)
+    ax1.axvline(x=x, color='gray', linestyle=':', linewidth=0.6, alpha=0.4)
 for y in [0, 4]:
-    ax1.axhline(y=y, color='gray', linestyle='--', linewidth=0.8, alpha=0.5)
+    ax1.axhline(y=y, color='gray', linestyle=':', linewidth=0.6, alpha=0.4)
 
-# Etiquetas de ejes
-ax1.text(0, -0.5, 'Eje 1', ha='center', fontsize=10, color='gray')
-ax1.text(4, -0.5, 'Eje 2', ha='center', fontsize=10, color='gray')
-ax1.text(-0.5, 0, 'Eje A', va='center', fontsize=10, color='gray', rotation=90)
-ax1.text(-0.5, 4, 'Eje B', va='center', fontsize=10, color='gray', rotation=90)
+ax1.text(0, -0.6, 'Eje 1', ha='center', fontsize=10, color='gray')
+ax1.text(4, -0.6, 'Eje 2', ha='center', fontsize=10, color='gray')
+ax1.text(-0.6, 0, 'A', va='center', fontsize=10, color='gray', rotation=90)
+ax1.text(-0.6, 4, 'B', va='center', fontsize=10, color='gray', rotation=90)
 
-# Dimensión
-ax1.annotate('', xy=(4, -0.8), xytext=(0, -0.8),
-             arrowprops=dict(arrowstyle='<->', color='green'))
-ax1.text(2, -1.1, '4.0 m', ha='center', fontsize=10, color='green')
-ax1.annotate('', xy=(-0.8, 4), xytext=(-0.8, 0),
-             arrowprops=dict(arrowstyle='<->', color='green'))
-ax1.text(-1.1, 2, '4.0 m', va='center', fontsize=10, color='green', rotation=90)
-
-ax1.set_xlim(-1.5, 5.5)
-ax1.set_ylim(-1.5, 5.5)
+ax1.set_xlim(-1.2, 5.2)
+ax1.set_ylim(-1.2, 5.2)
 ax1.set_aspect('equal')
-ax1.legend(loc='upper right')
+ax1.legend(loc='upper right', fontsize=9)
 ax1.grid(True, alpha=0.3)
 
-# --- Alzado (vista lateral) ---
+# --- Alzado con columna L ---
 ax2 = axes[1]
-ax2.set_title('ALZADO — Eje 1 (X-Z)', fontsize=13, fontweight='bold')
+ax2.set_title('ALZADO - Columna tipo L', fontsize=13, fontweight='bold')
 ax2.set_xlabel('X (m)')
 ax2.set_ylabel('Z (m)')
 
-# Columnas
-ax2.plot([0, 0], [0, 3], 'k-', linewidth=4, label='Columna')
-ax2.plot([4, 4], [0, 3], 'k-', linewidth=4)
+# Columna L (perfil)
+# Forma: cuadrado 30x30 con recorte 15x15
+col_pts = np.array([
+    [0, 0], [0.30, 0], [0.30, 0.15], [0.15, 0.15],
+    [0.15, 0.30], [0, 0.30], [0, 0]
+])
+col_x = col_pts[:, 0] - 0.15  # centrar
+col_y = col_pts[:, 1]
 
-# Viga
+# Dibujar columna L a escala (exagerada para visibilidad)
+scale = 2
+for cx_base in [0, 4]:
+    col_plot_x = col_x * scale + cx_base
+    col_plot_y = col_y * scale
+    ax2.fill(col_plot_x, col_plot_y, alpha=0.8, color='black')
+
+# Vigas
 ax2.plot([0, 4], [3, 3], 'b-', linewidth=4, label='Viga X')
 
-# Apoyo (triángulo)
-tri = patches.RegularPolygon((0, 0), 3, radius=0.3, orientation=0,
-                              facecolor='gray', edgecolor='black')
-ax2.add_patch(tri)
-tri2 = patches.RegularPolygon((4, 0), 3, radius=0.3, orientation=0,
-                               facecolor='gray', edgecolor='black')
-ax2.add_patch(tri2)
-
-# Cota altura
-ax2.annotate('', xy=(-0.5, 3), xytext=(-0.5, 0),
-             arrowprops=dict(arrowstyle='<->', color='green'))
-ax2.text(-0.8, 1.5, '3.0 m', va='center', fontsize=10, color='green', rotation=90)
-
-# Cota vano
-ax2.annotate('', xy=(4, -0.5), xytext=(0, -0.5),
-             arrowprops=dict(arrowstyle='<->', color='green'))
-ax2.text(2, -0.8, '4.0 m', ha='center', fontsize=10, color='green')
-
-# Niveles
-ax2.text(-0.3, 0, 'Nivel 0', fontsize=9, color='red')
-ax2.text(-0.3, 3, 'Nivel 1', fontsize=9, color='red')
+# Flechas de carga
+n_flechas = 8
+for i in range(n_flechas + 1):
+    x = i * 4.0 / n_flechas
+    ax2.annotate('', xy=(x, 3), xytext=(x, 3.6),
+                 arrowprops=dict(arrowstyle='->', color='red', lw=1.5))
+ax2.text(2, 3.8, 'q = 5.25 kN/m2', ha='center', fontsize=10, color='red')
 
 # Losa
 ax2.fill_between([0, 4], 3, 3.15, alpha=0.3, color='blue', label='Losa 15 cm')
 
+# Apoyos
+for cx in [0, 4]:
+    tri = patches.RegularPolygon((cx, 0), 3, radius=0.2, orientation=0,
+                                  facecolor='gray', edgecolor='black')
+    ax2.add_patch(tri)
+
+# Cotas
+ax2.annotate('', xy=(-0.5, 3), xytext=(-0.5, 0),
+             arrowprops=dict(arrowstyle='<->', color='green'))
+ax2.text(-0.8, 1.5, '3.0 m', va='center', fontsize=10, color='green', rotation=90)
+ax2.annotate('', xy=(4, -0.5), xytext=(0, -0.5),
+             arrowprops=dict(arrowstyle='<->', color='green'))
+ax2.text(2, -0.8, '4.0 m', ha='center', fontsize=10, color='green')
+
+# Leyenda de columna L
+ax2.text(0, 1.5, 'Col L\n30x30\nespesor 15', fontsize=8, ha='center',
+         bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+
 ax2.set_xlim(-1.5, 5.5)
-ax2.set_ylim(-1, 4)
+ax2.set_ylim(-1, 4.5)
 ax2.set_aspect('equal')
 ax2.legend(loc='upper right')
 ax2.grid(True, alpha=0.3)
 
 plt.tight_layout()
-plt.savefig('results/geometry.png', dpi=150, bbox_inches='tight')
-print("  ✓ results/geometry.png")
+plt.savefig('results/tributary_areas.png', dpi=150, bbox_inches='tight')
+print('  results/tributary_areas.png')
 
 # ============================================================
-# 2. DIAGRAMA DE CARGAS
+# 2. SECCION L - Detalle
 # ============================================================
-fig2, ax3 = plt.subplots(1, 1, figsize=(8, 6))
-ax3.set_title('CARGAS — Vista lateral (carga muerta)', fontsize=13, fontweight='bold')
-ax3.set_xlabel('X (m)')
-ax3.set_ylabel('Z (m)')
+fig2, ax3 = plt.subplots(1, 1, figsize=(6, 6))
+ax3.set_title('SECCION COLUMNA TIPO L\n30x30 cm, espesor 15 cm', fontsize=13, fontweight='bold')
 
-# Estructura
-ax3.plot([0, 0], [0, 3], 'k-', linewidth=4)
-ax3.plot([4, 4], [0, 3], 'k-', linewidth=4)
-ax3.plot([0, 4], [3, 3], 'b-', linewidth=4)
+# Forma L
+col_fill_x = [0, 30, 30, 15, 15, 0, 0]
+col_fill_y = [0, 0, 15, 15, 30, 30, 0]
+ax3.fill(col_fill_x, col_fill_y, alpha=0.7, color='steelblue', edgecolor='black', linewidth=2)
 
-# Apoyos
-tri = patches.RegularPolygon((0, 0), 3, radius=0.2, orientation=0,
-                              facecolor='gray', edgecolor='black')
-ax3.add_patch(tri)
-tri2 = patches.RegularPolygon((4, 0), 3, radius=0.2, orientation=0,
-                               facecolor='gray', edgecolor='black')
-ax3.add_patch(tri2)
+# Cotas
+# Ancho total
+ax3.annotate('', xy=(30, -3), xytext=(0, -3),
+             arrowprops=dict(arrowstyle='<->', color='green', lw=1.5))
+ax3.text(15, -5, '30 cm', ha='center', fontsize=11, color='green')
 
-# Flechas de carga (distribuida sobre la viga)
-n_flechas = 8
-for i in range(n_flechas + 1):
-    x = i * 4.0 / n_flechas
-    ax3.annotate('', xy=(x, 3), xytext=(x, 3.8),
-                 arrowprops=dict(arrowstyle='->', color='red', lw=1.5))
+# Alto total
+ax3.annotate('', xy=(-3, 30), xytext=(-3, 0),
+             arrowprops=dict(arrowstyle='<->', color='green', lw=1.5))
+ax3.text(-5, 15, '30 cm', va='center', fontsize=11, color='green', rotation=90)
 
-# Etiqueta
-ax3.text(2, 4.0, f'q = {25*0.15 + 1.5:.2f} kN/m² (losa + acabados)',
-         ha='center', fontsize=10, color='red')
+# Espesor brazo horizontal
+ax3.annotate('', xy=(30, 17), xytext=(15, 17),
+             arrowprops=dict(arrowstyle='<->', color='orange', lw=1.5))
+ax3.text(22.5, 19, '15 cm', ha='center', fontsize=10, color='orange')
 
-# Losa
-ax3.fill_between([0, 4], 3, 3.15, alpha=0.3, color='blue', label='Losa 15 cm')
+# Espesor brazo vertical
+ax3.annotate('', xy=(17, 30), xytext=(17, 15),
+             arrowprops=dict(arrowstyle='<->', color='orange', lw=1.5))
+ax3.text(19, 22.5, '15 cm', va='center', fontsize=10, color='orange', rotation=90)
 
-ax3.set_xlim(-1, 5)
-ax3.set_ylim(-1, 5)
+# Propiedades
+ax3.text(15, 8, 'A = 675 cm2\nIy = Iz = 46375 cm4',
+         ha='center', fontsize=10, color='white', fontweight='bold',
+         bbox=dict(boxstyle='round', facecolor='black', alpha=0.7))
+
+# Centroide
+ax3.plot(12.5, 12.5, 'r+', markersize=12, markeredgewidth=2)
+ax3.text(14, 14, 'G (12.5, 12.5)', fontsize=9, color='red')
+
+ax3.set_xlim(-8, 35)
+ax3.set_ylim(-8, 35)
 ax3.set_aspect('equal')
 ax3.grid(True, alpha=0.3)
 
 plt.tight_layout()
-plt.savefig('results/loads.png', dpi=150, bbox_inches='tight')
-print("  ✓ results/loads.png")
+plt.savefig('results/section_L.png', dpi=150, bbox_inches='tight')
+print('  results/section_L.png')
 
 # ============================================================
-# 3. ESQUEMA DE GDL
+# 3. GDL POR NODO
 # ============================================================
 fig3, ax4 = plt.subplots(1, 1, figsize=(8, 6))
-ax4.set_title('GDL POR NODO — 6 grados de libertad', fontsize=13, fontweight='bold')
+ax4.set_title('GDL POR NODO - 6 grados de libertad', fontsize=13, fontweight='bold')
 ax4.set_xlim(-2, 6)
 ax4.set_ylim(-2, 5)
 ax4.set_aspect('equal')
 ax4.grid(True, alpha=0.3)
 
-# Nodo
 ax4.plot(2, 2, 'ko', markersize=12, zorder=5)
 ax4.text(2, 2.3, 'Nodo', ha='center', fontsize=11, fontweight='bold')
 
-# Traslaciones (flechas sólidas)
+# Traslaciones
 ax4.annotate('', xy=(4, 2), xytext=(2, 2),
              arrowprops=dict(arrowstyle='->', color='blue', lw=2))
 ax4.text(4.2, 2, 'UX (1)', fontsize=10, color='blue')
@@ -187,29 +228,28 @@ ax4.annotate('', xy=(3, 3.5), xytext=(2, 2),
              arrowprops=dict(arrowstyle='->', color='blue', lw=2))
 ax4.text(3.2, 3.7, 'UZ (3)', fontsize=10, color='blue')
 
-# Rotaciones (arcos)
+# Rotaciones
 arc_rx = patches.Arc((2, 2), 1.5, 1.5, angle=0, theta1=30, theta2=150,
                       color='red', lw=2)
 ax4.add_patch(arc_rx)
-ax4.text(1, 3.2, 'θX (4)', fontsize=10, color='red')
+ax4.text(1, 3.2, 'thetaX (4)', fontsize=10, color='red')
 
 arc_ry = patches.Arc((2, 2), 1.5, 1.5, angle=0, theta1=-60, theta2=60,
                       color='red', lw=2)
 ax4.add_patch(arc_ry)
-ax4.text(3.2, 1.2, 'θY (5)', fontsize=10, color='red')
+ax4.text(3.2, 1.2, 'thetaY (5)', fontsize=10, color='red')
 
 arc_rz = patches.Arc((2, 2), 2.0, 2.0, angle=0, theta1=200, theta2=340,
                       color='red', lw=2)
 ax4.add_patch(arc_rz)
-ax4.text(2, -0.2, 'θZ (6)', fontsize=10, color='red', ha='center')
+ax4.text(2, -0.2, 'thetaZ (6)', fontsize=10, color='red', ha='center')
 
-# Leyenda
 ax4.plot([], [], 'b-', linewidth=2, label='Traslaciones (DOF 1-3)')
 ax4.plot([], [], 'r-', linewidth=2, label='Rotaciones (DOF 4-6)')
 ax4.legend(loc='lower left', fontsize=10)
 
 plt.tight_layout()
 plt.savefig('results/gdl.png', dpi=150, bbox_inches='tight')
-print("  ✓ results/gdl.png")
+print('  results/gdl.png')
 
-print("\n✓ Todas las gráficas generadas en results/")
+print('\nTodas las graficas generadas en results/')
