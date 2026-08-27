@@ -365,10 +365,10 @@ resultados = {
                              for k, v in reac_EX.items()}},
     },
 }
-with open('results/lab_results_vigasL.json', 'w') as f:
+with open('results/lab_results.json', 'w') as f:
     json.dump(resultados, f, indent=2)
 
-print(f"\nResultados guardados en results/lab_results_vigasL.json")
+print(f"\nResultados guardados en results/lab_results.json")
 print("=" * 60)
 print("  FIN")
 print("=" * 60)
