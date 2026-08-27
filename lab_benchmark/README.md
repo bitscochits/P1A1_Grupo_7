@@ -1,19 +1,39 @@
 # Lab Benchmark 3D
 
-Marco estructural simple para el laboratorio de la Semana 1.
+Marco estructural para el laboratorio de la Semana 1.
 
 ## Modelo
 
 - **Geometria**: 4.0 m x 4.0 m, 1 piso (3.0 m)
 - **Columnas**: 4 x tipo L 30x30 cm (espesor 15 cm)
-- **Vigas**: 4 x 25x50 cm (2 en X, 2 en Y)
-- **Losa**: 15 cm (descarga tributaria triangular/trapezoidal)
-- **Material**: Hormigon f'c = 21 MPa, Ec = 21551 MPa
+- **Vigas**: 4 x tipo L (losa colaborante ACI)
+- **Losa**: 15 cm
+- **Material**: Hormigon f'c = 25 MPa (G-25), Ec = 23469 MPa
 - **Unidades**: m, kN, kPa
+
+## Seccion L de Viga (losa colaborante)
+
+La viga se modela como una seccion L que representa la losa colaborante segun ACI:
+
+```
+   +------------------+  100 cm (ala = L/4)
+   |     15 cm        |
+   +------+-----+     |
+          |     |     |
+          |25x35|     |
+          |     |     |
+          +-----+     |
+```
+
+- **Ala**: 100 x 15 cm (losa colaborante, ancho = L/4)
+- **Alma**: 25 x 35 cm (parte bajo la losa)
+- **Area**: 0.2375 m2
+- **I_grav**: 4.63e-3 m4 (+78% vs viga sola)
+- **I_lat**: 2.07e-2 m4
 
 ## Cargas
 
-- **Carga muerta (G)**: Peso propio losa (3.75 kN/m2) + acabados (1.5 kN/m2) + peso vigas
+- **Carga muerta (G)**: Peso propio losa (3.75 kN/m2) + acabados (1.5 kN/m2) + peso vigas L
 - **Carga viva (Q)**: 2.0 kN/m2
 - **Sismo (EX)**: 50 kN por nodo del techo
 
@@ -23,13 +43,6 @@ Para losa cuadrada (4x4 m):
 - Vigas X: triangulos de base 4m, altura 2m (4 m2 por viga)
 - Vigas Y: triangulos de base 4m, altura 2m (4 m2 por viga)
 - Cada nodo esquina recibe: q * Lx * Ly / 8 = 10.50 kN
-
-## Columna tipo L
-
-Seccion L 30x30 cm, espesor 15 cm:
-- Area: 675 cm2 = 0.0675 m2
-- Iy = Iz = 46375 cm4 = 4.64e-5 m4
-- Centroide: (12.5, 12.5) cm desde la esquina
 
 ## Archivos
 
@@ -53,7 +66,6 @@ py -3.12 plot_geometry.py
 
 ## Resultados
 
-- **Equilibrio G**: 134.00 kN aplicados = 134.00 kN reacciones (error = 0)
+- **Equilibrio G**: 179.00 kN aplicados = 179.00 kN reacciones (error = 0)
 - **Equilibrio Q**: 32.00 kN aplicados = 32.00 kN reacciones (error = 0)
-- **Columna L**: V3 = 33.50 kN (compresion)
-- **UX sismo**: 114.0 mm
+- **UX sismo**: 104.0 mm
