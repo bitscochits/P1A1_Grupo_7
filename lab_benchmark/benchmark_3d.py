@@ -49,12 +49,12 @@ Ec    = 4700.0 * math.sqrt(fpc) * 1000.0  # kPa
 Gc    = Ec / (2.0 * (1.0 + 0.2))
 gamma = 25.0
 
-# --- Columna L 30x30, espesor 15 (SIN CAMBIOS) ---
-col_leg, col_t = 0.30, 0.15
-A_col  = col_leg**2 - (col_leg - col_t)**2   # 0.0675
-Iy_col = 4.6375e-5
-Iz_col = 4.6375e-5
-J_col  = 1.39125e-5
+# --- Columna CUADRADA 30x30 cm ---
+col_b, col_h = 0.30, 0.30
+A_col  = col_b * col_h            # 0.0900 m2
+Iy_col = col_b * col_h**3 / 12.0  # 6.75e-4 m4
+Iz_col = col_h * col_b**3 / 12.0  # 6.75e-4 m4
+J_col  = min(Iy_col, Iz_col) * 0.3  # 2.025e-4 m4
 
 # --- VIGA EN L: losa colaborante ACI (ala = luz/4) ---
 # Geometria de la L
@@ -235,7 +235,7 @@ print("\n[1] Construyendo modelo...")
 coords, cols, vx, vy = construir_modelo()
 nodos_piso1 = list(range(nNodosPorPiso + 1, 2 * nNodosPorPiso + 1))
 print(f"    Nodos:    {len(coords)}")
-print(f"    Columnas: {len(cols)} (L 30x30)")
+print(f"    Columnas: {len(cols)} (cuadradas 30x30)")
 print(f"    Vigas X:  {len(vx)} (L losa colaborante)")
 print(f"    Vigas Y:  {len(vy)} (L losa colaborante)")
 
